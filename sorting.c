@@ -762,6 +762,7 @@ int binarySearchLower(int left, int right, int key, int* a){
     /* We should place our key here and shift the array. */
     return mid;
   }
+  return -1;
 }
 
 
@@ -791,7 +792,7 @@ void insertionSort2(int length, int a[]) {
 	a[m] = a[m-1];
       }
       /* Swap. */
-      swap2(i, r, a);
+      swap(i, r, a);
     }
   }
 }
@@ -893,7 +894,7 @@ void fisherYatesShuffle(int length, int arr[]){
  * Best Case: Sorts in one shuffle.
  * Worst Case: Never finds a solution.
  * Will work for values up to +- 10 within reasonable time. After that: you will grow old before it is finished.
- * Therefore, a manual break after 999999999 iterations has been installed to not make your terminal hang. */
+ * Therefore, a manual break after 999999999 iterations has been installed to not make your terminal hang. 
  * */
 void bogoSort(int length, int arr[]){
 	int i;
