@@ -762,7 +762,6 @@ int binarySearchLower(int left, int right, int key, int* a){
     /* We should place our key here and shift the array. */
     return mid;
   }
-  return 0xBAADF00D;
 }
 
 
