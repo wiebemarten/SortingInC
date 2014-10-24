@@ -766,13 +766,6 @@ int binarySearchLower(int left, int right, int key, int* a){
 }
 
 
-void swap2(int* a, int* b) {
-  int h = *a;
-  *a = *b;
-  *b = h;
-}
-
-
 void insertionSort2(int length, int a[]) {
   int i;
   int r;
