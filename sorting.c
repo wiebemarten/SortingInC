@@ -833,13 +833,15 @@ void partialFlashSort(int length, int arr[]){
 	j=0;
 	k= m-1;
 	while(nmove < length - 1){/*Until all elements have been moved at least once */
-		while(j > (l[k]-1)){ /*While the current element is still not at its supposed bucket */
-			j++; /*Change the element we look at, and recalculate the current bucket we are at */
+		while(j > (l[k]-1)){ /*We are searching for a new cycle leader: This is a Repeat Until we find the first element where l[k] >= j*/
+			j++; /*As long as we did not find it yet, increment the element we look at, and recalculate the bucket we look at.*/
 			k = (int) (c1 * (arr[j]- amin) );
 		}
-		flash = arr[j]; /*Grab this element.*/
-		while(j!=l[k]){
-			k = (int) (c1 * (flash- amin) );
+		flash = arr[j]; /*Now make a copy of this element, as we're going to swap it soon.*/
+		while(j!=l[k]){ /* While the bucket of the current cycle leader is not yet full, repeat.*/
+			k = (int) (c1 * (flash- amin) );/* Recalculate bucket because the element in flash changes each iteration. */
+			
+			/* Now, swap flash with the element that was in there. We now have a new flash, and we keep looking. */
 			hold = arr[l[k]-1];
 			arr[l[k]-1] = flash;
 			flash = hold;
@@ -914,3 +916,252 @@ void bogoSort(int length, int arr[]){
 
 
 /***************************************************/
+
+
+
+/* 
+ * arr: pointer to first element of left sequence.
+ * barr: pointer to array to put sorted sequence in.
+ * leftSeqLength: length of left set ( left set goes from arr[0] to arr[leftSeqLength-1] )
+ * rightSeqLength: length of right set; (right set goes from arr[legtSeqLength] to arr[leftSeqLength+RightSeqLength-1]
+ *  */
+void mergeSubRoutine(int arr[],int barr[],int leftSeqLength,int rightSeqLength){
+	int i,j,k;
+	i=0;
+	j=leftSeqLength;
+	k=0;
+
+	
+	/*First, copy left sequence over to barr. This means we only need length/2 of extra memory.*/
+	for(i=0;i<leftSeqLength;i++){
+		barr[i] = arr[i];
+	}
+	
+	i=0;
+	while(i<leftSeqLength && j<leftSeqLength+rightSeqLength ){
+		
+		if(barr[i] < arr[j]){
+			arr[k] = barr[i];
+			i++;
+		}else{
+			arr[k] = arr[j];
+
+			j++;
+		}
+		k++;
+	}
+	while(i<leftSeqLength){
+		arr[k] = barr[i];
+		i++;		
+		k++;
+	}
+	while(j<leftSeqLength+rightSeqLength){
+		arr[k] = arr[j];
+		j++;
+		k++;			
+	}
+	return;
+}
+/* 
+ * In this version of the function, the right part subsequence is treated backwards, e.g. with the highest element first.
+ * Thus it is also inserted from right-to-left.
+ * arr: pointer to first element of left sequence.
+ * barr: pointer to array to put sorted sequence in.
+ * leftSeqLength: length of left set ( left set goes from arr[0] to arr[leftSeqLength-1] )
+ * rightSeqLength: length of right set; (right set goes from arr[legtSeqLength] to arr[leftSeqLength+RightSeqLength-1]
+ * 
+ *  */
+void mergeSubRoutineMirrored(int arr[],int barr[], int leftSeqLength,int rightSeqLength){
+
+
+	int i,j,k;
+	i=0;
+	j=leftSeqLength+rightSeqLength-1;
+	k=0;
+	
+	
+	/*First, copy left sequence over to barr. This means we need length of extra memory.*/
+	for(i=0;i<leftSeqLength+rightSeqLength;i++){
+		barr[i] = arr[i];
+	}
+	
+	i=0;
+	while(i<leftSeqLength && j>leftSeqLength-1 ){
+		if(barr[i] < barr[j]){
+			arr[k] = barr[i];
+			i++;
+		}else{
+			arr[k] = barr[j];
+			j--;
+		}
+		k++;
+	}
+	while(i<leftSeqLength){
+			arr[k] = barr[i];
+			i++;		
+			k++;
+	}
+	while(j>leftSeqLength-1){
+			arr[k] = barr[j];
+			j--;
+			k++;			
+	}
+	return;
+}
+
+
+
+
+void weemsort(int length, int arr[]){
+	/*First, get longest increasing sequence from the start of the array */
+	int startSeq=1;
+	int seqVector=1; /* A BitVector that counts what sequences are already sorted. Only uses powers of 2. */
+	int smallestSeqExp=0; /* To keep smallest-list-size lookup in constant time, we remove the trailing zeroes, and instead increase this variable when merging two lists. */
+	
+	int* barr = safeMalloc( length * sizeof(int));/*Extra array that is used for merging. Only needs to be length/2 because we only need to copy the first half of the data we want to merge.*/
+	
+	while(startSeq < length && arr[startSeq-1]< arr[startSeq]){
+		startSeq++;
+	}
+	
+	
+	
+	if(startSeq==length){ /* Array already sorted. nothing left to do. */
+		return;
+	}
+	
+	/* Observe: If the first 7 elements are already sorted, this means that the first four elements are sorted, the next two elements are sorted, and the next 1 element is sorted.
+	 * As we always want to merge lengths of powers of two, we split the first longest sequence like this.
+	 * The way our vector is set up, means that we can just assign it the value of starting seqence length.
+	 *  */
+	seqVector = startSeq; 
+	
+	/* Now, remove trailing zeroes and save them in our exponent, so looking up the last sequence length can be done in O(1). */
+	while((seqVector&1)==0){
+		seqVector >>=1;
+		smallestSeqExp +=1;
+	}
+	
+	
+	
+	int ddd;
+	for(ddd=0;ddd<length;ddd+=32){
+		insertionSort2(32,&arr[ddd]);
+	}
+	
+	int j;
+	int i;
+	int incSeqLen;
+	int decSeqLen;
+	int seqLen;
+	int nextSmallestSeqExp;
+	while((1 << smallestSeqExp) < length){/*while the smallest sorted sequence is smaller than the length of the array, e.g. while the list is not sorted*/
+		j = seqVector << smallestSeqExp; /*The element right after the currently sorted part */
+		i = 1;
+		incSeqLen=1;
+		decSeqLen=1;
+		
+		/*Find length of next already sorted sequence, either ascending or descending. */
+		
+		while(i< (1 << smallestSeqExp) && j+i < length && arr[j+i] == arr[j+i-1]){/* All values that are the same can be used for both ascending and descending sequences. Do not iterate over elements that are the same as the current twice. */
+			incSeqLen++;
+			decSeqLen++;
+			i++;
+		}
+		while(i< (1 << smallestSeqExp) && j+i<length && arr[j+i] >= arr[j+i-1]){ /* Only loops when next elements are a strict increasing subsequence (e.g. this and the next while loop will never run right after eachother) */
+			incSeqLen++;
+			i++;
+		}
+		while(i< (1 << smallestSeqExp) && j+i<length && arr[j+i] <= arr[j+i-1]){/* Only loops when next elements are a strict decreasing subsequence (e.g. this and the previous while loop will never run right after eachother) */
+			decSeqLen++;
+			i++;
+		}
+
+
+		if(incSeqLen == (1 << smallestSeqExp) || j+incSeqLen>=length){/* Merge the smallest sequence together with this new sequence. The last sequence is either of the same length, or all that is left until the end of the array. */
+			/* TODO: Recursive step */
+			seqLen = incSeqLen;
+			while((seqVector &1)==1){/*As long as we can combine the made sequence with the previous one */
+				mergeSubRoutine(&arr[j-(1 << smallestSeqExp)],barr,(1 << smallestSeqExp), seqLen);
+				j-= (1 << smallestSeqExp);
+
+				seqVector >>=1;/* Now, the smallest sequence size is twice what it was, thus remove the last smallest */
+				smallestSeqExp +=1;
+				
+				seqLen = (j+((1 << smallestSeqExp))>length?j+(1 << smallestSeqExp)-length:(1 << smallestSeqExp));/*Ensure that we dont overshoot the end of the array */
+
+			}
+			seqVector |=1;/*Set the final bit to one, as this is the size we end up with. */
+			
+		}else if(decSeqLen == (1 << smallestSeqExp) || j+decSeqLen>=length){ /* Merge the smallest sequence together with this new sequence, where this new sequence is to be handled backwards. The last sequence is either of the same length, or all that is left until the end of the array.*/
+			/* TODO: Recursive step */
+			seqLen = decSeqLen;
+			
+			mergeSubRoutineMirrored(&arr[j-(1 << smallestSeqExp)],barr,(1 << smallestSeqExp), seqLen);
+				seqVector >>=1;/* Now, the smallest sequence size is twice what it was, thus remove the last smallest */
+				j-= (1 << smallestSeqExp);
+
+				smallestSeqExp +=1;
+				
+				seqLen = (j+((1 << smallestSeqExp))>length?length-j:(1 << smallestSeqExp));/*Ensure that we dont overshoot the end of the array */
+				/*seqVector |=1;*//*Set the final bit to one, as this is the size we end up with. */
+				
+			while((seqVector &1)==1){/*As long as we can combine the made sequence with the previous one */
+				mergeSubRoutine(&arr[j-(1 << smallestSeqExp)],barr,(1 << smallestSeqExp), seqLen);
+				j-= (1 << smallestSeqExp);
+				seqVector >>=1;/* Now, the smallest sequence size is twice what it was, thus remove the last smallest */
+				smallestSeqExp +=1;
+				
+				
+				seqLen = (j+((1 << smallestSeqExp))>length?length-j:(1 << smallestSeqExp));/*Ensure that we dont overshoot the end of the array */
+
+			}
+			seqVector |=1;/*Set the final bit to one, as this is the size we end up with. */
+			
+		}else{/* Append sequence to sequence list as new smallest sequence. Do this only for increasing subsequences!*/
+			nextSmallestSeqExp=0; 
+			while(incSeqLen > 1 ){ /* Calculate size of biggest power of two in next smallest sequence*/
+				incSeqLen >>= 1;
+				nextSmallestSeqExp+=1;
+			}
+			/* Shift vector and change exp size accordingly. */
+			seqVector <<= (smallestSeqExp-nextSmallestSeqExp);
+			seqVector |=1; /* Set final bit to 1 to register this new sequence in the vector */
+			smallestSeqExp = nextSmallestSeqExp;
+			
+		}
+
+		
+		/*Only runs when we have reached the end. Travel back and merge everything that is left, irregardless of sequence size
+		 * Now, empty the whole seqVector.
+		 *  */
+		if(seqLen < (1 << smallestSeqExp)){
+
+			while(seqVector > 0){
+				
+				
+				if((seqVector &1) == 1){
+					j = seqVector << smallestSeqExp;
+					seqLen = length-j;/*Ensure that we dont overshoot the end of the array */
+
+					mergeSubRoutine(&arr[j-(1 << smallestSeqExp)],barr,(1 << smallestSeqExp), seqLen);
+					
+					
+					
+				}
+				seqVector >>=1;
+				smallestSeqExp+=1;
+				
+			}
+			
+
+		}
+		
+		
+	}
+	
+	
+	
+	
+	return;
+}
